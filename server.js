@@ -9,7 +9,8 @@ const { URL } = require("node:url");
 const HOST = process.env.HOST || "127.0.0.1";
 const PORT = Number(process.env.PORT || 3000);
 const BASE_DIR = __dirname;
-const DATA_DIR = path.join(BASE_DIR, ".data");
+const IS_VERCEL = Boolean(process.env.VERCEL);
+const DATA_DIR = IS_VERCEL ? path.join("/tmp", "eve-wealth-os") : path.join(BASE_DIR, ".data");
 const TOKEN_PATH = path.join(DATA_DIR, "eve-token.json");
 const USER_AGENT = "eve-wealth-os-live/1.0";
 
@@ -580,21 +581,59 @@ function statusPayload() {
   };
 }
 
-async function bootstrap() {
-  await loadDotEnvFile();
-  await ensureDataDir();
-  const token = await loadTokenFromDisk();
-  if (token) {
-    live.token = token;
-    live.auth.connected = Boolean(token.characterId);
-    live.auth.characterId = token.characterId || null;
+let initPromise = null;
+let refreshTimerStarted = false;
+
+async function initializeRuntime() {
+  if (initPromise) {
+    return initPromise;
   }
 
-  await refreshLiveLoop();
-  setInterval(refreshLiveLoop, REFRESH_INTERVAL_MS).unref();
+  initPromise = (async () => {
+    if (!IS_VERCEL) {
+      await loadDotEnvFile();
+    }
 
-  const server = http.createServer(async (req, res) => {
-    const reqUrl = new URL(req.url || "/", `http://${req.headers.host || `${HOST}:${PORT}`}`);
+    await ensureDataDir();
+    const token = await loadTokenFromDisk();
+    if (token) {
+      live.token = token;
+      live.auth.connected = Boolean(token.characterId);
+      live.auth.characterId = token.characterId || null;
+    }
+
+    await refreshLiveLoop();
+
+    if (!IS_VERCEL && !refreshTimerStarted) {
+      setInterval(refreshLiveLoop, REFRESH_INTERVAL_MS).unref();
+      refreshTimerStarted = true;
+    }
+  })();
+
+  return initPromise;
+}
+
+function buildRequestUrl(req) {
+  const host = req.headers?.host || `${HOST}:${PORT}`;
+  return new URL(req.url || "/", `http://${host}`);
+}
+
+function shouldRefreshSnapshot() {
+  if (!live.lastUpdatedAt) {
+    return true;
+  }
+  const updatedAt = Date.parse(live.lastUpdatedAt);
+  if (Number.isNaN(updatedAt)) {
+    return true;
+  }
+  return Date.now() - updatedAt > REFRESH_INTERVAL_MS;
+}
+
+async function requestHandler(req, res) {
+  try {
+    await initializeRuntime();
+
+    const reqUrl = buildRequestUrl(req);
     const pathname = reqUrl.pathname;
 
     if (pathname === "/api/status" && req.method === "GET") {
@@ -603,6 +642,9 @@ async function bootstrap() {
     }
 
     if (pathname === "/api/snapshot" && req.method === "GET") {
+      if (IS_VERCEL && shouldRefreshSnapshot()) {
+        await refreshLiveLoop();
+      }
       json(res, 200, {
         status: statusPayload(),
         snapshot: live.snapshot
@@ -632,6 +674,20 @@ async function bootstrap() {
     }
 
     await serveStatic(req, res, pathname);
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error("Erro no handler:", error);
+    json(res, 500, {
+      error: "internal_error",
+      message: error?.message || "Erro interno"
+    });
+  }
+}
+
+async function startLocalServer() {
+  await initializeRuntime();
+  const server = http.createServer((req, res) => {
+    requestHandler(req, res);
   });
 
   server.listen(PORT, HOST, () => {
@@ -640,8 +696,12 @@ async function bootstrap() {
   });
 }
 
-bootstrap().catch((error) => {
-  // eslint-disable-next-line no-console
-  console.error("Falha ao iniciar servidor:", error);
-  process.exit(1);
-});
+if (IS_VERCEL) {
+  module.exports = requestHandler;
+} else {
+  startLocalServer().catch((error) => {
+    // eslint-disable-next-line no-console
+    console.error("Falha ao iniciar servidor:", error);
+    process.exit(1);
+  });
+}

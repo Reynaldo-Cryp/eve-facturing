@@ -52,6 +52,12 @@ nohup npm start > eve-wealth.log 2>&1 &
 
 Depois abre `http://127.0.0.1:3000`.
 
+## Deploy no Vercel
+
+- O projeto já inclui [`vercel.json`](./vercel.json) para rotear tudo para `server.js`.
+- Em serverless, o token é guardado em `/tmp` (ephemeral), então pode expirar entre cold starts.
+- Para produção estável, usa storage persistente (KV/DB) para sessão OAuth.
+
 ## Segurança
 
 - Token fica em `.data/eve-token.json` localmente.
