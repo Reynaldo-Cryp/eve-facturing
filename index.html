@@ -1,0 +1,396 @@
+<!doctype html>
+<html lang="pt-PT">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>EVE Wealth OS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;700&family=Syne:wght@500;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <div class="ambient ambient-a"></div>
+    <div class="ambient ambient-b"></div>
+    <div class="ambient ambient-c"></div>
+
+    <header class="hero reveal">
+      <p class="chip">EVE Wealth OS // High-Sec Decision Core</p>
+      <h1>Bilhões de ISK com mineração segura</h1>
+      <p class="hero-copy">
+        Painel pessoal para decidir o que minerar, o que fabricar, que skill treinar e como
+        bater a tua meta de PLEX com risco baixo.
+      </p>
+      <div class="live-inline">
+        <span id="live-dot" class="live-dot offline"></span>
+        <strong id="live-status">Modo local</strong>
+        <small id="live-updated">Sem sincronização com ESI</small>
+      </div>
+      <div class="hero-metrics">
+        <article class="metric">
+          <span id="hero-hourly">0 ISK/h</span>
+          <small>Ritmo atual</small>
+        </article>
+        <article class="metric">
+          <span id="hero-daily">0 ISK/dia</span>
+          <small>Receita diária</small>
+        </article>
+        <article class="metric">
+          <span id="hero-monthly">0 ISK/mês</span>
+          <small>Projeção 30 dias</small>
+        </article>
+      </div>
+    </header>
+
+    <nav class="quick-nav reveal">
+      <a href="#live-core">Live 24h</a>
+      <a href="#painel-hoje">Painel Hoje</a>
+      <a href="#perfil">Skills</a>
+      <a href="#mining">Mining Brain</a>
+      <a href="#industry">Fabricação</a>
+      <a href="#simulador">Simulador</a>
+      <a href="#alertas">Alertas</a>
+    </nav>
+
+    <main class="stack">
+      <section id="live-core" class="card reveal">
+        <div class="section-head">
+          <h2>Núcleo Live 24h</h2>
+          <div class="live-badge">
+            <span id="live-badge-dot" class="live-dot offline"></span>
+            <span id="live-badge-text">Offline</span>
+          </div>
+        </div>
+        <p class="section-copy">
+          Conecta o EVE SSO para puxar skills, wallet, mining, industry, orders e mercado de forma
+          contínua.
+        </p>
+        <div class="live-actions">
+          <a id="connect-eve" class="ghost-button anchor-button" href="/auth/eve/start">Conectar EVE SSO</a>
+          <button id="refresh-live" class="ghost-button" type="button">Atualizar Live Agora</button>
+          <button id="logout-live" class="ghost-button danger-soft" type="button">Desconectar</button>
+        </div>
+        <p id="live-mode-warning" class="live-warning"></p>
+
+        <div class="live-grid">
+          <article class="live-card">
+            <h3>Personagem</h3>
+            <p id="live-character">Sem conexão</p>
+          </article>
+          <article class="live-card">
+            <h3>Wallet</h3>
+            <p id="live-wallet">0 ISK</p>
+          </article>
+          <article class="live-card">
+            <h3>Mining (ESI)</h3>
+            <p id="live-mining">Sem dados</p>
+          </article>
+          <article class="live-card">
+            <h3>Industry Jobs</h3>
+            <p id="live-industry">Sem dados</p>
+          </article>
+          <article class="live-card">
+            <h3>Orders</h3>
+            <p id="live-orders">Sem dados</p>
+          </article>
+          <article class="live-card">
+            <h3>Skill Queue</h3>
+            <p id="live-skillqueue">Sem dados</p>
+          </article>
+        </div>
+
+        <ul id="live-errors" class="alerts-list"></ul>
+      </section>
+
+      <section id="painel-hoje" class="card reveal">
+        <div class="section-head">
+          <h2>Painel Hoje</h2>
+          <button id="refresh-advice" class="ghost-button" type="button">Recalcular decisões</button>
+        </div>
+        <p class="section-copy">
+          O sistema escolhe as 3 ações de maior retorno para hoje com base no teu perfil atual.
+        </p>
+        <div class="actions-grid stagger">
+          <article class="action-box">
+            <h3>Ação #1</h3>
+            <p id="action-1">A calcular...</p>
+          </article>
+          <article class="action-box">
+            <h3>Ação #2</h3>
+            <p id="action-2">A calcular...</p>
+          </article>
+          <article class="action-box">
+            <h3>Ação #3</h3>
+            <p id="action-3">A calcular...</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="perfil" class="split">
+        <article class="card reveal">
+          <h2>Perfil e Skills</h2>
+          <p class="section-copy">
+            Ajusta os níveis reais da conta. O motor recalcula todo o plano em tempo real.
+          </p>
+
+          <div class="skill-grid">
+            <label for="skill-mining">
+              Mining
+              <strong id="value-mining">4</strong>
+            </label>
+            <input id="skill-mining" type="range" min="0" max="5" step="1" value="4" />
+
+            <label for="skill-astrogeology">
+              Astrogeology
+              <strong id="value-astrogeology">3</strong>
+            </label>
+            <input id="skill-astrogeology" type="range" min="0" max="5" step="1" value="3" />
+
+            <label for="skill-reprocessing">
+              Reprocessing
+              <strong id="value-reprocessing">3</strong>
+            </label>
+            <input id="skill-reprocessing" type="range" min="0" max="5" step="1" value="3" />
+
+            <label for="skill-industry">
+              Industry
+              <strong id="value-industry">3</strong>
+            </label>
+            <input id="skill-industry" type="range" min="0" max="5" step="1" value="3" />
+
+            <label for="skill-massProduction">
+              Mass Production
+              <strong id="value-massProduction">2</strong>
+            </label>
+            <input id="skill-massProduction" type="range" min="0" max="5" step="1" value="2" />
+
+            <label for="skill-accounting">
+              Accounting
+              <strong id="value-accounting">2</strong>
+            </label>
+            <input id="skill-accounting" type="range" min="0" max="5" step="1" value="2" />
+
+            <label for="skill-brokerRelations">
+              Broker Relations
+              <strong id="value-brokerRelations">2</strong>
+            </label>
+            <input id="skill-brokerRelations" type="range" min="0" max="5" step="1" value="2" />
+
+            <label for="skill-supplyChain">
+              Supply Chain
+              <strong id="value-supplyChain">1</strong>
+            </label>
+            <input id="skill-supplyChain" type="range" min="0" max="5" step="1" value="1" />
+          </div>
+
+          <div class="economy-grid">
+            <label for="play-hours">
+              Horas de jogo por dia
+              <input id="play-hours" type="number" min="1" max="16" step="0.5" value="3" />
+            </label>
+            <label for="base-yield">
+              Capacidade base de mineração (m3/h)
+              <input id="base-yield" type="number" min="3000" max="50000" step="100" value="18500" />
+            </label>
+            <label for="logistics-cost">
+              Custo logístico médio (%)
+              <input id="logistics-cost" type="number" min="0" max="20" step="0.1" value="4.5" />
+            </label>
+            <label for="industry-fee">
+              Índice/taxa industrial (%)
+              <input id="industry-fee" type="number" min="0" max="15" step="0.1" value="3.2" />
+            </label>
+            <label for="mining-share">
+              Tempo dedicado à mineração (%)
+              <input id="mining-share" type="number" min="20" max="100" step="1" value="70" />
+            </label>
+          </div>
+
+          <div class="economy-grid">
+            <label for="mining-ship">
+              Nave mineradora
+              <select id="mining-ship">
+                <option value="hulk" selected>Hulk</option>
+                <option value="mackinaw">Mackinaw</option>
+                <option value="covetor">Covetor</option>
+                <option value="retriever">Retriever</option>
+                <option value="procurer">Procurer</option>
+              </select>
+            </label>
+            <label for="support-ship">
+              Nave de suporte
+              <select id="support-ship">
+                <option value="porpoise" selected>Porpoise</option>
+                <option value="orca">Orca</option>
+                <option value="none">Sem suporte</option>
+              </select>
+            </label>
+            <label for="burst-level">
+              Qualidade dos bursts (0-5)
+              <input id="burst-level" type="number" min="0" max="5" step="1" value="4" />
+            </label>
+          </div>
+
+          <p id="fleet-summary" class="badge-line">Setup atual: Hulk + Porpoise</p>
+        </article>
+
+        <article id="plex" class="card reveal">
+          <h2>PLEX Tracker</h2>
+          <p class="section-copy">
+            Define a tua meta mensal de PLEX e acompanha se a operação diária está suficiente.
+          </p>
+          <div class="economy-grid">
+            <label for="plex-goal">
+              Meta de PLEX/mês
+              <input id="plex-goal" type="number" min="50" max="5000" step="10" value="500" />
+            </label>
+            <label for="plex-price">
+              Preço médio por PLEX (ISK)
+              <input id="plex-price" type="number" min="1000000" max="10000000" step="10000" value="5600000" />
+            </label>
+            <label for="wallet">
+              Carteira atual (ISK)
+              <input id="wallet" type="number" min="0" step="1000000" value="600000000" />
+            </label>
+          </div>
+
+          <div class="plex-summary">
+            <p id="plex-daily-target">Meta diária: ...</p>
+            <p id="plex-gap">Gap diário: ...</p>
+            <p id="plex-days">Dias estimados para o alvo: ...</p>
+            <div class="progress">
+              <div id="plex-progress"></div>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section id="mining" class="split">
+        <article class="card reveal">
+          <h2>Mining Brain</h2>
+          <p class="section-copy">
+            Comparação líquida por m3 entre vender bruto, comprimir, refinar ou puxar para fábrica.
+          </p>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Ore</th>
+                  <th>Bruto</th>
+                  <th>Comprimido</th>
+                  <th>Refino</th>
+                  <th>Fábrica</th>
+                  <th>Melhor rota</th>
+                </tr>
+              </thead>
+              <tbody id="ore-table-body"></tbody>
+            </table>
+          </div>
+        </article>
+
+        <article id="risk" class="card reveal">
+          <h2>Mapa de Segurança</h2>
+          <p class="section-copy">
+            Sistemas high-sec ordenados por score de segurança + logística + aderência ao minério.
+          </p>
+          <ul id="safe-systems" class="systems-list"></ul>
+        </article>
+      </section>
+
+      <section id="industry" class="split">
+        <article class="card reveal">
+          <h2>Copiloto de Fabricação</h2>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Produto</th>
+                  <th>Lucro/run</th>
+                  <th>Lucro/h</th>
+                  <th>Liquidez</th>
+                  <th>Decisão</th>
+                </tr>
+              </thead>
+              <tbody id="industry-body"></tbody>
+            </table>
+          </div>
+          <p id="industry-best" class="badge-line">Melhor item: ...</p>
+        </article>
+
+        <article id="skills-roi" class="card reveal">
+          <h2>Skill ROI Planner</h2>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Skill</th>
+                  <th>Nível alvo</th>
+                  <th>Δ ISK/dia</th>
+                  <th>Horas treino</th>
+                  <th>ROI/h</th>
+                </tr>
+              </thead>
+              <tbody id="skills-roi-body"></tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+
+      <section id="simulador" class="split">
+        <article class="card reveal">
+          <h2>Simulador "E se"</h2>
+          <p class="section-copy">
+            Testa um upgrade de skill antes de treinar e vê o impacto direto em ISK diário.
+          </p>
+          <div class="scenario-controls">
+            <label for="scenario-skill">
+              Skill
+              <select id="scenario-skill"></select>
+            </label>
+            <label for="scenario-target">
+              Nível alvo
+              <select id="scenario-target"></select>
+            </label>
+            <button id="simulate-btn" type="button">Simular upgrade</button>
+          </div>
+          <p id="scenario-result" class="scenario-result">Escolhe uma skill para simular.</p>
+        </article>
+
+        <article id="plan" class="card reveal">
+          <h2>Plano 7/30/90 dias</h2>
+          <div class="plan-grid">
+            <div>
+              <h3>7 dias</h3>
+              <ul id="plan-7"></ul>
+            </div>
+            <div>
+              <h3>30 dias</h3>
+              <ul id="plan-30"></ul>
+            </div>
+            <div>
+              <h3>90 dias</h3>
+              <ul id="plan-90"></ul>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section id="alertas" class="card reveal">
+        <h2>Alertas Inteligentes</h2>
+        <ul id="alerts-list" class="alerts-list"></ul>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <p>
+        Estimativas locais para suporte à decisão. Atualiza os inputs regularmente para refletir o
+        mercado real do EVE.
+      </p>
+    </footer>
+
+    <script src="./app.js"></script>
+  </body>
+</html>

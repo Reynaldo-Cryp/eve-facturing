@@ -1,0 +1,9 @@
+{
+  "name": "eve-wealth-os",
+  "version": "1.0.0",
+  "private": true,
+  "description": "EVE Wealth OS com live sync ESI",
+  "scripts": {
+    "start": "node server.js"
+  }
+}

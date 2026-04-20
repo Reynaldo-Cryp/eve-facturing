@@ -1,0 +1,16 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Runtime local data
+.data/
+
+# Node / logs
+node_modules/
+*.log
+npm-debug.log*
+
+# OS/editor
+.DS_Store
+.vscode/
