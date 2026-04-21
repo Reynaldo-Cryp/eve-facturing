@@ -1,6 +1,6 @@
 "use strict";
 
-const STORAGE_KEY = "eve-wealth-os-v2";
+const STORAGE_KEY = "eve-wealth-os-v3";
 const LIVE_POLL_MS = 15000;
 
 const liveCache = {
@@ -53,7 +53,8 @@ const DEFAULT_STATE = {
   burstLevel: 4,
   plexGoal: 500,
   plexPrice: 5600000,
-  wallet: 600000000
+  wallet: 600000000,
+  reinvestRate: 35
 };
 
 const MINING_SHIPS = {
@@ -293,7 +294,8 @@ const INPUT_IDS = [
   "burst-level",
   "plex-goal",
   "plex-price",
-  "wallet"
+  "wallet",
+  "reinvest-rate"
 ];
 
 const skillValueNodes = {
@@ -319,6 +321,23 @@ function formatISKCompact(value) {
   return `${Intl.NumberFormat("pt-PT", { notation: "compact", maximumFractionDigits: 1 }).format(
     Math.round(value)
   )} ISK`;
+}
+
+function formatDays(days) {
+  if (!Number.isFinite(days)) {
+    return "N/A";
+  }
+  if (days < 1) {
+    return "< 1 dia";
+  }
+  if (days < 30) {
+    return `${days.toFixed(1)} dias`;
+  }
+  const months = days / 30;
+  if (months < 24) {
+    return `${months.toFixed(1)} meses`;
+  }
+  return `${(months / 12).toFixed(1)} anos`;
 }
 
 function parseNumber(value, fallback) {
@@ -386,7 +405,8 @@ function loadState() {
       burstLevel: clamp(parseNumber(parsed.burstLevel, DEFAULT_STATE.burstLevel), 0, 5),
       plexGoal: clamp(parseNumber(parsed.plexGoal, DEFAULT_STATE.plexGoal), 50, 5000),
       plexPrice: clamp(parseNumber(parsed.plexPrice, DEFAULT_STATE.plexPrice), 1000000, 10000000),
-      wallet: Math.max(0, parseNumber(parsed.wallet, DEFAULT_STATE.wallet))
+      wallet: Math.max(0, parseNumber(parsed.wallet, DEFAULT_STATE.wallet)),
+      reinvestRate: clamp(parseNumber(parsed.reinvestRate, DEFAULT_STATE.reinvestRate), 0, 95)
     };
   } catch (_error) {
     return structuredClone(DEFAULT_STATE);
@@ -416,6 +436,7 @@ function writeStateToInputs(state) {
   document.getElementById("plex-goal").value = String(state.plexGoal);
   document.getElementById("plex-price").value = String(state.plexPrice);
   document.getElementById("wallet").value = String(state.wallet);
+  document.getElementById("reinvest-rate").value = String(state.reinvestRate);
 }
 
 function readStateFromInputs() {
@@ -465,7 +486,12 @@ function readStateFromInputs() {
       1000000,
       10000000
     ),
-    wallet: Math.max(0, parseNumber(document.getElementById("wallet")?.value, DEFAULT_STATE.wallet))
+    wallet: Math.max(0, parseNumber(document.getElementById("wallet")?.value, DEFAULT_STATE.wallet)),
+    reinvestRate: clamp(
+      parseNumber(document.getElementById("reinvest-rate")?.value, DEFAULT_STATE.reinvestRate),
+      0,
+      95
+    )
   };
 }
 
@@ -530,32 +556,55 @@ function economyFromState(state) {
   };
 }
 
-function evaluateOres(state, eco = economyFromState(state)) {
+function getLiveMarketContext() {
+  const market = liveCache.snapshot?.market || {};
+  const products = market.products && typeof market.products === "object" ? market.products : {};
+  return {
+    mineralIndex: clamp(parseNumber(market.mineralIndex, 1), 0.65, 1.7),
+    productIndex: clamp(parseNumber(market.productIndex, 1), 0.7, 1.8),
+    productPrices: products,
+    oreCoverage: clamp(parseNumber(market.oreCoverage, 0), 0, 1)
+  };
+}
+
+function evaluateOres(state, eco = economyFromState(state), marketCtx = getLiveMarketContext()) {
   return ORES.map((ore) => {
     const liveOre = liveCache.oreOverrides[ore.name] || {};
     const rawPricePerM3 = Number(liveOre.rawPricePerM3 || ore.rawPricePerM3);
     const compressedPricePerM3 = Number(liveOre.compressedPricePerM3 || ore.compressedPricePerM3);
     const refinedValuePerM3 = Number(liveOre.refinedValuePerM3 || ore.refinedValuePerM3);
+    const marketSlip = 1 - (1 - ore.liquidity) * 0.14;
+    const operationalEfficiency = clamp(
+      0.78 + state.skills.supplyChain * 0.012 + eco.supportShip.logisticsReduction * 0.01,
+      0.72,
+      0.94
+    );
+    const effectiveThroughput = eco.miningThroughput * operationalEfficiency;
 
     const netRaw =
-      rawPricePerM3 * (1 - eco.salesTax - eco.brokerFee - eco.effectiveLogisticsCost / 100);
+      rawPricePerM3 *
+      marketSlip *
+      (1 - eco.salesTax - eco.brokerFee - eco.effectiveLogisticsCost / 100);
 
     const netCompressed =
       compressedPricePerM3 *
+      marketSlip *
       (1 + eco.compressionBonus) *
-      (1 - eco.salesTax - eco.brokerFee - eco.effectiveLogisticsCost / 150);
+      (1 - eco.salesTax - eco.brokerFee - eco.effectiveLogisticsCost / 260);
 
     const netRefined =
       refinedValuePerM3 *
+      marketSlip *
       eco.refineEfficiency *
-      (1 - eco.salesTax - eco.brokerFee - eco.effectiveLogisticsCost / 220);
+      (1 - eco.salesTax - eco.brokerFee - eco.effectiveLogisticsCost / 230);
 
     const netFactory =
       refinedValuePerM3 *
+        marketSlip *
         eco.refineEfficiency *
-        (1.08 + eco.factoryBonus * 0.03 + eco.compressionBonus * 0.35) *
+        (1.06 + eco.factoryBonus * 0.04 + eco.compressionBonus * 0.26) *
         (1 - eco.salesTax - eco.brokerFee) -
-      refinedValuePerM3 * (state.industryFee / 100) * 0.35;
+      refinedValuePerM3 * (state.industryFee / 100) * 0.34;
 
     const options = [
       { route: "Vender bruto", net: netRaw },
@@ -565,9 +614,10 @@ function evaluateOres(state, eco = economyFromState(state)) {
     ].sort((a, b) => b.net - a.net);
 
     const bestOption = options[0];
-    const iskHour = bestOption.net * eco.miningThroughput * ore.harvestModifier;
-    const riskPenalty = 1 - ore.risk * 0.12 * eco.fleetRiskMultiplier;
-    const score = iskHour * ore.liquidity * riskPenalty;
+    const iskHour = bestOption.net * effectiveThroughput * ore.harvestModifier;
+    const riskPenalty = 1 - ore.risk * 0.14 * eco.fleetRiskMultiplier;
+    const confidenceFactor = 0.85 + marketCtx.oreCoverage * 0.15;
+    const score = iskHour * ore.liquidity * riskPenalty * confidenceFactor;
 
     return {
       ...ore,
@@ -577,31 +627,44 @@ function evaluateOres(state, eco = economyFromState(state)) {
       options,
       bestOption,
       iskHour,
-      score
+      score,
+      effectiveThroughput
     };
   }).sort((a, b) => b.score - a.score);
 }
 
-function evaluateIndustry(state, eco = economyFromState(state)) {
-
+function evaluateIndustry(state, eco = economyFromState(state), marketCtx = getLiveMarketContext()) {
   return INDUSTRY_PRODUCTS.map((product) => {
-    const adjustedMaterials = product.materialCost * (1 - state.skills.reprocessing * 0.009);
+    const liveSell = Number(marketCtx.productPrices[product.name]?.sellPrice || 0);
+    const sellPrice =
+      liveSell > 0 ? liveSell : product.sellPrice * Math.min(Math.max(marketCtx.productIndex, 0.8), 1.5);
+    const adjustedMaterials =
+      product.materialCost * marketCtx.mineralIndex * (1 - state.skills.reprocessing * 0.009);
     const adjustedTime = product.baseTimeMinutes * eco.industryTimeMultiplier;
-    const runsPerHour = (60 / adjustedTime) * eco.jobSlots;
-    const netSale = product.sellPrice * (1 - eco.salesTax - eco.brokerFee);
-    const industryTax = product.sellPrice * (state.industryFee / 100);
+    const theoreticalRuns = (60 / adjustedTime) * eco.jobSlots;
+    const marketFill = clamp(product.demand * (0.86 + (1 - product.complexity) * 0.11), 0.58, 1.04);
+    const capitalLimitFactor = clamp(state.wallet / (adjustedMaterials * 40), 0.35, 1.2);
+    const runsPerHour = theoreticalRuns * marketFill * capitalLimitFactor;
+    const netSale = sellPrice * (1 - eco.salesTax - eco.brokerFee);
+    const industryTax = sellPrice * (state.industryFee / 100);
     const profitPerRun = netSale - adjustedMaterials - industryTax;
-    const profitHour = profitPerRun * runsPerHour * product.demand;
-    const stability = 1 - product.complexity * 0.25;
+    const profitHour = profitPerRun * runsPerHour;
+    const stability = clamp(1 - product.complexity * 0.25, 0.52, 1);
     const score = profitHour * stability;
+    const marginPct = adjustedMaterials > 0 ? (profitPerRun / adjustedMaterials) * 100 : 0;
+    const breakEvenRuns = profitPerRun > 0 ? Math.ceil(adjustedMaterials / profitPerRun) : Infinity;
 
     return {
       ...product,
+      sellPrice,
+      adjustedMaterials,
       adjustedTime,
       runsPerHour,
       profitPerRun,
       profitHour,
-      score
+      score,
+      marginPct,
+      breakEvenRuns
     };
   }).sort((a, b) => b.score - a.score);
 }
@@ -623,10 +686,54 @@ function evaluateSystems(preferredOre, safetyBias = 0) {
   }).sort((a, b) => b.score - a.score);
 }
 
+function computeWealthTargets(totalDaily, wallet, reinvestRate) {
+  const goals = [
+    { label: "1B", amount: 1_000_000_000 },
+    { label: "5B", amount: 5_000_000_000 },
+    { label: "10B", amount: 10_000_000_000 }
+  ];
+
+  return goals.map((goal) => {
+    const linearDays = totalDaily > 0 ? Math.max(0, (goal.amount - wallet) / totalDaily) : Infinity;
+    if (wallet >= goal.amount) {
+      return {
+        ...goal,
+        linearDays: 0,
+        acceleratedDays: 0,
+        dailyNeeded30: 0
+      };
+    }
+
+    const reinvest = clamp(reinvestRate / 100, 0, 0.95);
+    const growthPerDay = reinvest * 0.0019;
+    const cappedDaily = totalDaily * (1 + reinvest * 2.3);
+    let simulatedWallet = wallet;
+    let simulatedDaily = totalDaily;
+    let acceleratedDays = Infinity;
+
+    for (let day = 1; day <= 3650; day += 1) {
+      simulatedWallet += simulatedDaily;
+      simulatedDaily = Math.min(simulatedDaily * (1 + growthPerDay), cappedDaily);
+      if (simulatedWallet >= goal.amount) {
+        acceleratedDays = day;
+        break;
+      }
+    }
+
+    return {
+      ...goal,
+      linearDays,
+      acceleratedDays,
+      dailyNeeded30: Math.max(0, (goal.amount - wallet) / 30)
+    };
+  });
+}
+
 function computeSnapshot(state) {
   const eco = economyFromState(state);
-  const ores = evaluateOres(state, eco);
-  const industry = evaluateIndustry(state, eco);
+  const marketCtx = getLiveMarketContext();
+  const ores = evaluateOres(state, eco, marketCtx);
+  const industry = evaluateIndustry(state, eco, marketCtx);
   const bestOre = ores[0];
   const bestIndustry = industry[0];
   const systems = evaluateSystems(bestOre.name, eco.safetyBias);
@@ -643,6 +750,7 @@ function computeSnapshot(state) {
   const plexDailyGap = plexDailyTarget - totalDaily;
   const progressPercent = clamp((monthlyProjection / plexNeed) * 100, 0, 100);
   const daysToGoal = totalDaily > 0 ? Math.max(0, (plexNeed - state.wallet) / totalDaily) : Infinity;
+  const wealthTargets = computeWealthTargets(totalDaily, state.wallet, state.reinvestRate);
 
   return {
     ores,
@@ -661,7 +769,9 @@ function computeSnapshot(state) {
     daysToGoal,
     fleetLabel: eco.fleetLabel,
     effectiveLogisticsCost: eco.effectiveLogisticsCost,
-    burstLevel: eco.burstLevel
+    burstLevel: eco.burstLevel,
+    wealthTargets,
+    marketConfidence: marketCtx.oreCoverage
   };
 }
 
@@ -882,6 +992,7 @@ function renderHero(snapshot) {
 function renderActions(snapshot, skillRoi) {
   const bestSystem = snapshot.systems[0];
   const topSkill = skillRoi[0];
+  const target1B = snapshot.wealthTargets.find((target) => target.label === "1B");
   const recommendedRuns = Math.max(
     1,
     Math.round((snapshot.bestIndustry.runsPerHour * (snapshot.bestIndustry.demand + 0.2)) / 2)
@@ -895,16 +1006,16 @@ function renderActions(snapshot, skillRoi) {
 
   document.getElementById(
     "action-2"
-  ).textContent = `Fabrica ${snapshot.bestIndustry.name} por ~${recommendedRuns} runs no próximo bloco industrial para capturar ${formatISK(
-    Math.max(0, snapshot.bestIndustry.profitHour)
-  )}/h.`;
+  ).textContent = `Fabrica ${snapshot.bestIndustry.name} por ~${recommendedRuns} runs; margem média ${snapshot.bestIndustry.marginPct.toFixed(
+    1
+  )}% e potencial de ${formatISK(Math.max(0, snapshot.bestIndustry.profitHour))}/h.`;
 
   if (topSkill) {
     document.getElementById(
       "action-3"
     ).textContent = `Treina ${topSkill.label} para nível ${topSkill.targetLevel}: ganho estimado de ${formatISK(
       topSkill.deltaDaily
-    )}/dia (${formatISK(topSkill.roiPerHour)}/hora de treino).`;
+    )}/dia (${formatISK(topSkill.roiPerHour)}/hora de treino). ETA 1B: ${target1B ? formatDays(target1B.acceleratedDays) : "N/A"}.`;
   } else {
     document.getElementById("action-3").textContent =
       "Todas as skills já estão no máximo para este modelo. Otimiza só execução e logística.";
@@ -934,10 +1045,44 @@ function renderPlex(snapshot) {
   }
 
   document.getElementById("plex-days").textContent = Number.isFinite(snapshot.daysToGoal)
-    ? `Dias estimados para o alvo (com carteira atual): ${snapshot.daysToGoal.toFixed(1)}`
+    ? `Dias estimados para o alvo (com carteira atual): ${formatDays(snapshot.daysToGoal)}`
     : "Dias estimados para o alvo: infinito (receita atual zero).";
 
   document.getElementById("plex-progress").style.width = `${snapshot.progressPercent.toFixed(1)}%`;
+}
+
+function renderWealthTargets(snapshot) {
+  const target1B = snapshot.wealthTargets.find((target) => target.label === "1B");
+  const target5B = snapshot.wealthTargets.find((target) => target.label === "5B");
+  const target10B = snapshot.wealthTargets.find((target) => target.label === "10B");
+
+  document.getElementById("eta-1b").textContent = target1B
+    ? `1B: ${formatDays(target1B.acceleratedDays)} (linear ${formatDays(target1B.linearDays)})`
+    : "1B: N/A";
+  document.getElementById("eta-5b").textContent = target5B
+    ? `5B: ${formatDays(target5B.acceleratedDays)} (linear ${formatDays(target5B.linearDays)})`
+    : "5B: N/A";
+  document.getElementById("eta-10b").textContent = target10B
+    ? `10B: ${formatDays(target10B.acceleratedDays)} (linear ${formatDays(target10B.linearDays)})`
+    : "10B: N/A";
+
+  const noteNode = document.getElementById("eta-note");
+  if (!noteNode) {
+    return;
+  }
+
+  if (!target1B) {
+    noteNode.textContent = "Plano de escala: sem dados suficientes.";
+    return;
+  }
+
+  if (target1B.acceleratedDays < target1B.linearDays * 0.85) {
+    noteNode.textContent =
+      "Plano de escala: reinvestimento está a acelerar bem. Mantém ciclo mineração + fabricação.";
+  } else {
+    noteNode.textContent =
+      "Plano de escala: aceleração baixa. Aumenta throughput e reduz custos para encurtar o caminho ao 1B.";
+  }
 }
 
 function renderOreTable(oreResults) {
@@ -980,10 +1125,13 @@ function renderIndustry(industryResults) {
   tbody.innerHTML = industryResults
     .map((product, idx) => {
       const decision = idx === 0 ? '<span class="tag-best">Prioridade</span>' : "Monitorar";
+      const breakEvenText = Number.isFinite(product.breakEvenRuns) ? `${product.breakEvenRuns} runs` : "N/A";
       return `<tr>
         <td>${product.name}</td>
         <td>${formatISKCompact(product.profitPerRun)}</td>
         <td>${formatISKCompact(product.profitHour)}</td>
+        <td>${product.adjustedTime.toFixed(1)} min</td>
+        <td>${breakEvenText}</td>
         <td>${Math.round(product.demand * 100)}%</td>
         <td>${decision}</td>
       </tr>`;
@@ -993,7 +1141,7 @@ function renderIndustry(industryResults) {
   const best = industryResults[0];
   document.getElementById("industry-best").textContent = `Melhor item agora: ${best.name} (${formatISK(
     best.profitHour
-  )}/h)`;
+  )}/h, margem ${best.marginPct.toFixed(1)}%)`;
 }
 
 function renderSkillROI(skillRows) {
@@ -1021,21 +1169,27 @@ function renderPlan(snapshot, skillRows, state) {
   const secondSkill = skillRows[1] ?? topSkill;
   const thirdSkill = skillRows[2] ?? secondSkill;
   const bestSystem = snapshot.systems[0];
+  const target1B = snapshot.wealthTargets.find((target) => target.label === "1B");
+  const target5B = snapshot.wealthTargets.find((target) => target.label === "5B");
   const runsDay = Math.max(1, Math.round(snapshot.bestIndustry.runsPerHour * (state.playHours * 0.4)));
 
   const sevenDays = [
     `Minera ${snapshot.bestOre.name} em ${bestSystem.name} por ${Math.max(1, Math.round(state.playHours * (state.miningShare / 100)))}h/dia.`,
     `Executa rota ${snapshot.bestOre.bestOption.route} para extrair ${formatISK(snapshot.bestOre.iskHour)} por hora.`,
+    target1B ? `Ritmo atual para 1B: ${formatDays(target1B.acceleratedDays)}.` : "Ritmo para 1B indisponível.",
     topSkill
       ? `Treina ${topSkill.label} para nível ${topSkill.targetLevel}.`
       : "Mantém foco total na execução operacional."
   ];
 
   const thirtyDays = [
-    `Consolida produção de ${snapshot.bestIndustry.name} em ${runsDay} runs/dia.`,
+    `Consolida produção de ${snapshot.bestIndustry.name} em ${runsDay} runs/dia (break-even ${Number.isFinite(
+      snapshot.bestIndustry.breakEvenRuns
+    ) ? snapshot.bestIndustry.breakEvenRuns : "N/A"} runs).`,
     secondSkill
       ? `Treina ${secondSkill.label} para nível ${secondSkill.targetLevel}.`
       : "Revê blueprint, sem novo treino prioritário.",
+    target5B ? `Projeção para 5B: ${formatDays(target5B.acceleratedDays)}.` : "Projeção para 5B indisponível.",
     `Mantém taxa logística abaixo de ${Math.max(2, state.logisticsCost - 0.8).toFixed(1)}%.`
   ];
 
@@ -1059,6 +1213,7 @@ function writeList(node, items) {
 function generateAlerts(snapshot, state, skillRows) {
   const alerts = [];
   const bestSystem = snapshot.systems[0];
+  const target1B = snapshot.wealthTargets.find((target) => target.label === "1B");
 
   if (snapshot.plexDailyGap > 0) {
     alerts.push({
@@ -1100,6 +1255,21 @@ function generateAlerts(snapshot, state, skillRows) {
     });
   }
 
+  if (snapshot.bestIndustry.marginPct < 8) {
+    alerts.push({
+      type: "warn",
+      message:
+        "Margem industrial baixa. Troca item ou espera janela melhor de mercado antes de escalar runs."
+    });
+  }
+
+  if (snapshot.marketConfidence < 0.6) {
+    alerts.push({
+      type: "warn",
+      message: "Cobertura de mercado parcial. Conecta EVE SSO para melhorar precisão dos lucros."
+    });
+  }
+
   if (state.supportShip === "porpoise") {
     alerts.push({
       type: "good",
@@ -1112,6 +1282,22 @@ function generateAlerts(snapshot, state, skillRows) {
       type: "good",
       message: "Skills core em teto operacional. Próximo ganho vem de escala e timing de mercado."
     });
+  }
+
+  if (target1B) {
+    if (target1B.acceleratedDays > 180) {
+      alerts.push({
+        type: "danger",
+        message: `ETA para 1B ainda longo (${formatDays(
+          target1B.acceleratedDays
+        )}). Precisas subir throughput e margem simultaneamente.`
+      });
+    } else {
+      alerts.push({
+        type: "good",
+        message: `Ritmo para 1B saudável: ${formatDays(target1B.acceleratedDays)} no cenário acelerado.`
+      });
+    }
   }
 
   return alerts.slice(0, 6);
@@ -1167,12 +1353,16 @@ function runScenario(state, baseSnapshot) {
   const trainHours = trainingHoursBetween(skillKey, currentLevel, targetLevel);
   const roiPerHour = trainHours > 0 ? deltaDaily / trainHours : 0;
   const paybackDays = deltaDaily > 0 ? (trainHours / 24) / (deltaDaily / Math.max(baseSnapshot.totalDaily, 1)) : Infinity;
+  const base1B = baseSnapshot.wealthTargets.find((target) => target.label === "1B");
+  const sim1B = simulatedSnapshot.wealthTargets.find((target) => target.label === "1B");
 
   resultNode.textContent = `${SKILL_LABELS[skillKey]} ${currentLevel} -> ${targetLevel}: +${formatISK(
     deltaDaily
   )}/dia, treino estimado ${trainHours.toFixed(0)}h, ROI ${formatISK(roiPerHour)}/hora de treino, payback ~${Number.isFinite(
     paybackDays
-  ) ? paybackDays.toFixed(1) : "N/A"} dias.`;
+  ) ? paybackDays.toFixed(1) : "N/A"} dias, ETA 1B ${base1B ? formatDays(base1B.acceleratedDays) : "N/A"} -> ${
+    sim1B ? formatDays(sim1B.acceleratedDays) : "N/A"
+  }.`;
 }
 
 function renderDashboard() {
@@ -1188,6 +1378,7 @@ function renderDashboard() {
   renderActions(snapshot, skillRoi);
   renderFleetSummary(snapshot);
   renderPlex(snapshot);
+  renderWealthTargets(snapshot);
   renderOreTable(snapshot.ores);
   renderSystems(snapshot.systems);
   renderIndustry(snapshot.industry);

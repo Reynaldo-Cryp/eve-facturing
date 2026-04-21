@@ -255,6 +255,10 @@
               Carteira atual (ISK)
               <input id="wallet" type="number" min="0" step="1000000" value="600000000" />
             </label>
+            <label for="reinvest-rate">
+              Reinvestimento diário do lucro (%)
+              <input id="reinvest-rate" type="number" min="0" max="95" step="1" value="35" />
+            </label>
           </div>
 
           <div class="plex-summary">
@@ -264,6 +268,14 @@
             <div class="progress">
               <div id="plex-progress"></div>
             </div>
+          </div>
+
+          <div class="wealth-targets">
+            <h3>Billion Sprint</h3>
+            <p id="eta-1b">1B: ...</p>
+            <p id="eta-5b">5B: ...</p>
+            <p id="eta-10b">10B: ...</p>
+            <p id="eta-note">Plano de escala: ...</p>
           </div>
         </article>
       </section>
@@ -310,6 +322,8 @@
                   <th>Produto</th>
                   <th>Lucro/run</th>
                   <th>Lucro/h</th>
+                  <th>Tempo/run</th>
+                  <th>Break-even</th>
                   <th>Liquidez</th>
                   <th>Decisão</th>
                 </tr>

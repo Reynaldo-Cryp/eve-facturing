@@ -30,13 +30,95 @@ const CHARACTER_SKILL_MAP = {
   24268: "supplyChain" // Supply Chain Management
 };
 
-const ORE_TYPE_IDS = {
-  Veldspar: 1230,
-  Scordite: 1228,
-  Plagioclase: 18,
-  Pyroxeres: 1224,
-  Kernite: 20,
-  Omber: 1227
+const ORE_MARKET_META = {
+  Veldspar: {
+    rawTypeId: 1230,
+    compressedTypeId: 28432,
+    unitVolume: 0.1,
+    unitsPerCompressed: 100,
+    refinePremium: 1.09
+  },
+  Scordite: {
+    rawTypeId: 1228,
+    compressedTypeId: 28429,
+    unitVolume: 0.15,
+    unitsPerCompressed: 100,
+    refinePremium: 1.11
+  },
+  Plagioclase: {
+    rawTypeId: 18,
+    compressedTypeId: 28422,
+    unitVolume: 0.35,
+    unitsPerCompressed: 100,
+    refinePremium: 1.12
+  },
+  Pyroxeres: {
+    rawTypeId: 1224,
+    compressedTypeId: 28424,
+    unitVolume: 0.3,
+    unitsPerCompressed: 100,
+    refinePremium: 1.13
+  },
+  Kernite: {
+    rawTypeId: 20,
+    compressedTypeId: 28410,
+    unitVolume: 1.2,
+    unitsPerCompressed: 100,
+    refinePremium: 1.15
+  },
+  Omber: {
+    rawTypeId: 1227,
+    compressedTypeId: 28416,
+    unitVolume: 0.6,
+    unitsPerCompressed: 100,
+    refinePremium: 1.16
+  }
+};
+
+const MINERAL_TYPE_IDS = {
+  Tritanium: 34,
+  Pyerite: 35,
+  Mexallon: 36,
+  Isogen: 37,
+  Nocxium: 38,
+  Zydrine: 39,
+  Megacyte: 40
+};
+
+const MINERAL_BASELINE_PRICES = {
+  Tritanium: 5.4,
+  Pyerite: 11.2,
+  Mexallon: 63,
+  Isogen: 125,
+  Nocxium: 860,
+  Zydrine: 2700,
+  Megacyte: 2100
+};
+
+const MINERAL_INDEX_WEIGHTS = {
+  Tritanium: 0.42,
+  Pyerite: 0.24,
+  Mexallon: 0.15,
+  Isogen: 0.1,
+  Nocxium: 0.06,
+  Zydrine: 0.02,
+  Megacyte: 0.01
+};
+
+const INDUSTRY_PRODUCT_TYPE_IDS = {
+  "Antimatter Charge M": 230,
+  "Hobgoblin I": 2454,
+  "Small Shield Extender II": 380,
+  "400mm Steel Plates I": 11297,
+  "Damage Control II": 2048
+};
+
+const INDUSTRY_PRODUCT_BASELINES = {
+  "Antimatter Charge M": 1110000,
+  "Hobgoblin I": 620000,
+  "Small Shield Extender II": 1460000,
+  "400mm Steel Plates I": 1820000,
+  "Damage Control II": 6200000
 };
 
 const PLEX_TYPE_ID = 44992;
@@ -358,22 +440,90 @@ function extractMarketPrices(pricesRows) {
     }
   }
 
-  const ores = {};
-  for (const [name, typeId] of Object.entries(ORE_TYPE_IDS)) {
-    const market = byId.get(typeId);
-    if (market) {
-      ores[name] = {
-        rawPricePerM3: Number(market.adjusted_price || market.average_price || 0),
-        compressedPricePerM3: Number(market.average_price || market.adjusted_price || 0) * 1.09,
-        refinedValuePerM3: Number(market.average_price || market.adjusted_price || 0) * 1.21
-      };
+  function unitPrice(typeId) {
+    const row = byId.get(Number(typeId));
+    if (!row) {
+      return 0;
+    }
+    const avg = Number(row.average_price || 0);
+    const adj = Number(row.adjusted_price || 0);
+    return avg > 0 ? avg : adj;
+  }
+
+  const mineralPrices = {};
+  for (const [name, typeId] of Object.entries(MINERAL_TYPE_IDS)) {
+    mineralPrices[name] = unitPrice(typeId);
+  }
+
+  let mineralWeighted = 0;
+  let mineralWeightTotal = 0;
+  for (const [name, baseline] of Object.entries(MINERAL_BASELINE_PRICES)) {
+    const current = Number(mineralPrices[name] || 0);
+    const weight = Number(MINERAL_INDEX_WEIGHTS[name] || 0);
+    if (current > 0 && baseline > 0 && weight > 0) {
+      mineralWeighted += (current / baseline) * weight;
+      mineralWeightTotal += weight;
     }
   }
 
-  const plexRow = byId.get(PLEX_TYPE_ID);
+  const mineralIndex =
+    mineralWeightTotal > 0 ? Math.min(Math.max(mineralWeighted / mineralWeightTotal, 0.65), 1.7) : 1;
+
+  const ores = {};
+  let oreCoverageCount = 0;
+  for (const [name, meta] of Object.entries(ORE_MARKET_META)) {
+    const rawUnitPrice = unitPrice(meta.rawTypeId);
+    if (rawUnitPrice <= 0 || meta.unitVolume <= 0) {
+      continue;
+    }
+
+    oreCoverageCount += 1;
+    const compressedUnitPrice = unitPrice(meta.compressedTypeId);
+    const rawPricePerM3 = rawUnitPrice / meta.unitVolume;
+    const compressedPricePerM3 =
+      compressedUnitPrice > 0
+        ? compressedUnitPrice / (meta.unitVolume * meta.unitsPerCompressed)
+        : rawPricePerM3 * 1.03;
+    const refinedValuePerM3 = rawPricePerM3 * meta.refinePremium * Math.min(Math.max(mineralIndex, 0.8), 1.35);
+
+    ores[name] = {
+      rawPricePerUnit: rawUnitPrice,
+      compressedPricePerUnit: compressedUnitPrice > 0 ? compressedUnitPrice : null,
+      rawPricePerM3,
+      compressedPricePerM3,
+      refinedValuePerM3,
+      source: compressedUnitPrice > 0 ? "raw+compressed" : "raw+estimated-compressed"
+    };
+  }
+
+  const products = {};
+  const productRatios = [];
+  for (const [name, typeId] of Object.entries(INDUSTRY_PRODUCT_TYPE_IDS)) {
+    const sellPrice = unitPrice(typeId);
+    if (sellPrice > 0) {
+      products[name] = { sellPrice };
+      const baseline = Number(INDUSTRY_PRODUCT_BASELINES[name] || 0);
+      if (baseline > 0) {
+        productRatios.push(sellPrice / baseline);
+      }
+    }
+  }
+
+  const productIndex = productRatios.length
+    ? Math.min(Math.max(productRatios.reduce((acc, value) => acc + value, 0) / productRatios.length, 0.7), 1.8)
+    : 1;
+
+  const plexPrice = unitPrice(PLEX_TYPE_ID);
   return {
     ores,
-    plexPrice: plexRow ? Number(plexRow.average_price || plexRow.adjusted_price || 0) : null
+    minerals: mineralPrices,
+    mineralIndex,
+    products,
+    productIndex,
+    oreCoverage: Object.keys(ORE_MARKET_META).length
+      ? oreCoverageCount / Object.keys(ORE_MARKET_META).length
+      : 0,
+    plexPrice: plexPrice > 0 ? plexPrice : null
   };
 }
 

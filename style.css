@@ -412,6 +412,26 @@ select {
   color: #d4ebff;
 }
 
+.wealth-targets {
+  margin-top: 0.9rem;
+  border: 1px solid rgba(143, 195, 228, 0.2);
+  border-radius: 14px;
+  background: rgba(4, 14, 24, 0.5);
+  padding: 0.75rem;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.wealth-targets h3 {
+  font-size: 0.95rem;
+  color: #d8f6ff;
+}
+
+.wealth-targets p {
+  color: #cee8fd;
+  line-height: 1.35;
+}
+
 .progress {
   margin-top: 0.3rem;
   background: rgba(7, 20, 31, 0.78);
