@@ -110,10 +110,37 @@ const MINERAL_INDEX_WEIGHTS = {
 
 const INDUSTRY_PRODUCT_TYPE_IDS = {
   "Antimatter Charge M": 230,
+  "Scourge Heavy Missile": 209,
+  "Inferno Heavy Missile": 208,
+  "Nanite Repair Paste": 28668,
   "Hobgoblin I": 2454,
+  "Hammerhead I": 2183,
+  "Warrior I": 2486,
+  "Acolyte I": 2203,
+  "Vespa I": 15508,
+  "Hornet I": 2464,
+  "Valkyrie I": 15510,
+  "Ogre I": 2444,
   "Small Shield Extender II": 380,
+  "Medium Shield Extender II": 3831,
+  "Large Shield Extender II": 3841,
   "400mm Steel Plates I": 11297,
-  "Damage Control II": 2048
+  "1600mm Steel Plates I": 11279,
+  "Damage Control II": 2048,
+  "Multispectrum Shield Hardener II": 2281,
+  "Warp Disruptor II": 3244,
+  "Stasis Webifier II": 527,
+  "Co-Processor II": 3888,
+  "Power Diagnostic System II": 1541,
+  "Capacitor Power Relay II": 1447,
+  "Cap Recharger II": 2032,
+  "Signal Amplifier II": 1987,
+  "Gyrostabilizer II": 519,
+  "Magnetic Field Stabilizer II": 10190,
+  "Heat Sink II": 2364,
+  "Ballistic Control System II": 22291,
+  "Shield Power Relay II": 1422,
+  "Drone Damage Amplifier II": 4405
 };
 
 const INDUSTRY_PRODUCT_BASELINES = {

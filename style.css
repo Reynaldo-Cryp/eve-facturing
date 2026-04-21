@@ -185,6 +185,32 @@ p {
   border-color: rgba(36, 208, 175, 0.74);
 }
 
+.view-tabs {
+  max-width: 1180px;
+  margin: 0 auto 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.view-tab {
+  border: 1px solid rgba(143, 195, 228, 0.3);
+  border-radius: 999px;
+  padding: 0.45rem 0.8rem;
+  font-family: inherit;
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: #d8ebff;
+  background: rgba(6, 19, 31, 0.66);
+  cursor: pointer;
+}
+
+.view-tab.active {
+  border-color: rgba(36, 208, 175, 0.8);
+  background: rgba(36, 208, 175, 0.16);
+  color: #d6fff3;
+}
+
 .stack {
   max-width: 1180px;
   margin: 0 auto;
@@ -623,6 +649,21 @@ td {
 .alert.good {
   border-color: rgba(112, 247, 167, 0.54);
   background: rgba(112, 247, 167, 0.12);
+}
+
+.decision-excellent {
+  color: #96ffd1;
+  font-weight: 700;
+}
+
+.decision-good {
+  color: #ffd78d;
+  font-weight: 700;
+}
+
+.decision-wait {
+  color: #ffaba6;
+  font-weight: 700;
 }
 
 .footer {

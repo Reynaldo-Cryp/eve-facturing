@@ -51,9 +51,15 @@
       <a href="#perfil">Skills</a>
       <a href="#mining">Mining Brain</a>
       <a href="#industry">Fabricação</a>
+      <a href="#margin-hunter">Margin Hunter</a>
       <a href="#simulador">Simulador</a>
       <a href="#alertas">Alertas</a>
     </nav>
+
+    <div id="view-tabs" class="view-tabs reveal">
+      <button class="view-tab active" data-view="overview" type="button">Visão Geral</button>
+      <button class="view-tab" data-view="margin" type="button">Margin Hunter</button>
+    </div>
 
     <main class="stack">
       <section id="live-core" class="card reveal">
@@ -105,7 +111,7 @@
         <ul id="live-errors" class="alerts-list"></ul>
       </section>
 
-      <section id="painel-hoje" class="card reveal">
+      <section id="painel-hoje" class="card reveal" data-view-panel="overview">
         <div class="section-head">
           <h2>Painel Hoje</h2>
           <button id="refresh-advice" class="ghost-button" type="button">Recalcular decisões</button>
@@ -129,7 +135,7 @@
         </div>
       </section>
 
-      <section id="perfil" class="split">
+      <section id="perfil" class="split" data-view-panel="overview">
         <article class="card reveal">
           <h2>Perfil e Skills</h2>
           <p class="section-copy">
@@ -280,7 +286,7 @@
         </article>
       </section>
 
-      <section id="mining" class="split">
+      <section id="mining" class="split" data-view-panel="overview">
         <article class="card reveal">
           <h2>Mining Brain</h2>
           <p class="section-copy">
@@ -312,7 +318,7 @@
         </article>
       </section>
 
-      <section id="industry" class="split">
+      <section id="industry" class="split" data-view-panel="overview">
         <article class="card reveal">
           <h2>Copiloto de Fabricação</h2>
           <div class="table-wrap">
@@ -353,7 +359,47 @@
         </article>
       </section>
 
-      <section id="simulador" class="split">
+      <section id="margin-hunter" class="card reveal" data-view-panel="margin" hidden>
+        <div class="section-head">
+          <h2>Margin Hunter</h2>
+          <button id="refresh-margin" class="ghost-button" type="button">Atualizar Ranking</button>
+        </div>
+        <p class="section-copy">
+          Ranking das melhores oportunidades de fabricação no mercado atual, com foco em margem e
+          lucro por hora.
+        </p>
+        <div class="economy-grid">
+          <label for="margin-min-profit">
+            Lucro mínimo por run (ISK)
+            <input id="margin-min-profit" type="number" min="0" step="10000" value="120000" />
+          </label>
+          <label for="margin-min-percent">
+            Margem mínima (%)
+            <input id="margin-min-percent" type="number" min="0" max="200" step="1" value="12" />
+          </label>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>Categoria</th>
+                <th>Lucro/run</th>
+                <th>Margem</th>
+                <th>Lucro/h</th>
+                <th>Break-even</th>
+                <th>Mercado</th>
+                <th>Decisão</th>
+              </tr>
+            </thead>
+            <tbody id="margin-body"></tbody>
+          </table>
+        </div>
+        <p id="margin-best" class="badge-line">Melhor oportunidade: ...</p>
+        <ul id="margin-tips" class="alerts-list"></ul>
+      </section>
+
+      <section id="simulador" class="split" data-view-panel="overview">
         <article class="card reveal">
           <h2>Simulador "E se"</h2>
           <p class="section-copy">
@@ -392,7 +438,7 @@
         </article>
       </section>
 
-      <section id="alertas" class="card reveal">
+      <section id="alertas" class="card reveal" data-view-panel="overview">
         <h2>Alertas Inteligentes</h2>
         <ul id="alerts-list" class="alerts-list"></ul>
       </section>

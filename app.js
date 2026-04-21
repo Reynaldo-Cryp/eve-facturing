@@ -212,6 +212,41 @@ const INDUSTRY_PRODUCTS = [
   }
 ];
 
+const MARGIN_PRODUCT_CATALOG = [
+  { name: "Antimatter Charge M", category: "Ammo", baseMaterialCost: 730000, baseTimeMinutes: 18, demand: 0.98, complexity: 0.15, matFactor: 1.02, mineralExposure: 0.95 },
+  { name: "Scourge Heavy Missile", category: "Ammo", baseMaterialCost: 540000, baseTimeMinutes: 16, demand: 0.95, complexity: 0.14, matFactor: 1.03, mineralExposure: 0.95 },
+  { name: "Inferno Heavy Missile", category: "Ammo", baseMaterialCost: 530000, baseTimeMinutes: 16, demand: 0.94, complexity: 0.14, matFactor: 1.03, mineralExposure: 0.95 },
+  { name: "Nanite Repair Paste", category: "Consumable", baseMaterialCost: 1500000, baseTimeMinutes: 22, demand: 0.9, complexity: 0.2, matFactor: 1.1, mineralExposure: 0.7 },
+  { name: "Hobgoblin I", category: "Drone", baseMaterialCost: 380000, baseTimeMinutes: 14, demand: 0.96, complexity: 0.1, matFactor: 1.0, mineralExposure: 0.95 },
+  { name: "Hammerhead I", category: "Drone", baseMaterialCost: 820000, baseTimeMinutes: 20, demand: 0.9, complexity: 0.14, matFactor: 1.01, mineralExposure: 0.95 },
+  { name: "Warrior I", category: "Drone", baseMaterialCost: 360000, baseTimeMinutes: 14, demand: 0.93, complexity: 0.1, matFactor: 1.0, mineralExposure: 0.95 },
+  { name: "Acolyte I", category: "Drone", baseMaterialCost: 350000, baseTimeMinutes: 14, demand: 0.88, complexity: 0.1, matFactor: 1.0, mineralExposure: 0.95 },
+  { name: "Vespa I", category: "Drone", baseMaterialCost: 780000, baseTimeMinutes: 20, demand: 0.85, complexity: 0.14, matFactor: 1.01, mineralExposure: 0.95 },
+  { name: "Hornet I", category: "Drone", baseMaterialCost: 360000, baseTimeMinutes: 14, demand: 0.87, complexity: 0.1, matFactor: 1.0, mineralExposure: 0.95 },
+  { name: "Valkyrie I", category: "Drone", baseMaterialCost: 1050000, baseTimeMinutes: 24, demand: 0.82, complexity: 0.15, matFactor: 1.03, mineralExposure: 0.95 },
+  { name: "Ogre I", category: "Drone", baseMaterialCost: 6200000, baseTimeMinutes: 112, demand: 0.74, complexity: 0.22, matFactor: 1.08, mineralExposure: 0.95 },
+  { name: "Damage Control II", category: "Module T2", baseMaterialCost: 4400000, baseTimeMinutes: 88, demand: 0.9, complexity: 0.33, matFactor: 1.75, mineralExposure: 0.5 },
+  { name: "Multispectrum Shield Hardener II", category: "Module T2", baseMaterialCost: 3800000, baseTimeMinutes: 72, demand: 0.89, complexity: 0.31, matFactor: 1.7, mineralExposure: 0.52 },
+  { name: "Warp Disruptor II", category: "Module T2", baseMaterialCost: 2900000, baseTimeMinutes: 56, demand: 0.91, complexity: 0.28, matFactor: 1.65, mineralExposure: 0.5 },
+  { name: "Stasis Webifier II", category: "Module T2", baseMaterialCost: 2500000, baseTimeMinutes: 52, demand: 0.88, complexity: 0.27, matFactor: 1.62, mineralExposure: 0.5 },
+  { name: "Small Shield Extender II", category: "Module T2", baseMaterialCost: 960000, baseTimeMinutes: 32, demand: 0.92, complexity: 0.2, matFactor: 1.5, mineralExposure: 0.55 },
+  { name: "Medium Shield Extender II", category: "Module T2", baseMaterialCost: 2200000, baseTimeMinutes: 54, demand: 0.9, complexity: 0.25, matFactor: 1.6, mineralExposure: 0.55 },
+  { name: "Large Shield Extender II", category: "Module T2", baseMaterialCost: 5200000, baseTimeMinutes: 92, demand: 0.86, complexity: 0.33, matFactor: 1.78, mineralExposure: 0.55 },
+  { name: "400mm Steel Plates I", category: "Armor T1", baseMaterialCost: 1250000, baseTimeMinutes: 44, demand: 0.89, complexity: 0.24, matFactor: 1.02, mineralExposure: 0.95 },
+  { name: "1600mm Steel Plates I", category: "Armor T1", baseMaterialCost: 5400000, baseTimeMinutes: 86, demand: 0.85, complexity: 0.28, matFactor: 1.03, mineralExposure: 0.95 },
+  { name: "Co-Processor II", category: "Module T2", baseMaterialCost: 1800000, baseTimeMinutes: 38, demand: 0.8, complexity: 0.24, matFactor: 1.55, mineralExposure: 0.5 },
+  { name: "Power Diagnostic System II", category: "Module T2", baseMaterialCost: 2400000, baseTimeMinutes: 48, demand: 0.83, complexity: 0.26, matFactor: 1.6, mineralExposure: 0.5 },
+  { name: "Capacitor Power Relay II", category: "Module T2", baseMaterialCost: 1750000, baseTimeMinutes: 40, demand: 0.82, complexity: 0.23, matFactor: 1.55, mineralExposure: 0.5 },
+  { name: "Cap Recharger II", category: "Module T2", baseMaterialCost: 1400000, baseTimeMinutes: 34, demand: 0.84, complexity: 0.22, matFactor: 1.52, mineralExposure: 0.5 },
+  { name: "Signal Amplifier II", category: "Module T2", baseMaterialCost: 1900000, baseTimeMinutes: 38, demand: 0.79, complexity: 0.25, matFactor: 1.57, mineralExposure: 0.5 },
+  { name: "Gyrostabilizer II", category: "Module T2", baseMaterialCost: 2850000, baseTimeMinutes: 54, demand: 0.9, complexity: 0.3, matFactor: 1.68, mineralExposure: 0.5 },
+  { name: "Magnetic Field Stabilizer II", category: "Module T2", baseMaterialCost: 3000000, baseTimeMinutes: 56, demand: 0.88, complexity: 0.31, matFactor: 1.7, mineralExposure: 0.5 },
+  { name: "Heat Sink II", category: "Module T2", baseMaterialCost: 2550000, baseTimeMinutes: 50, demand: 0.86, complexity: 0.29, matFactor: 1.66, mineralExposure: 0.5 },
+  { name: "Ballistic Control System II", category: "Module T2", baseMaterialCost: 3500000, baseTimeMinutes: 62, demand: 0.92, complexity: 0.32, matFactor: 1.74, mineralExposure: 0.5 },
+  { name: "Shield Power Relay II", category: "Module T2", baseMaterialCost: 1900000, baseTimeMinutes: 42, demand: 0.8, complexity: 0.24, matFactor: 1.56, mineralExposure: 0.5 },
+  { name: "Drone Damage Amplifier II", category: "Module T2", baseMaterialCost: 2100000, baseTimeMinutes: 45, demand: 0.87, complexity: 0.26, matFactor: 1.6, mineralExposure: 0.5 }
+];
+
 const SYSTEMS = [
   {
     name: "Couster",
@@ -673,6 +708,56 @@ function evaluateIndustry(state, eco = economyFromState(state), marketCtx = getL
       score,
       marginPct,
       breakEvenRuns
+    };
+  }).sort((a, b) => b.score - a.score);
+}
+
+function evaluateMarginOpportunities(state, eco = economyFromState(state), marketCtx = getLiveMarketContext()) {
+  return MARGIN_PRODUCT_CATALOG.map((item) => {
+    const market = marketCtx.productPrices[item.name] || {};
+    const marketPrice = Number(market.marketPrice || market.sellPrice || 0);
+    const instantPrice = Number(market.instantSellPrice || 0);
+    const patientPrice = Number(market.sellPrice || 0);
+    const referencePrice =
+      marketPrice > 0
+        ? marketPrice
+        : patientPrice > 0
+          ? patientPrice
+          : item.baseMaterialCost * (1.18 + item.complexity * 0.4);
+
+    const inputIndex = 1 + (marketCtx.mineralIndex - 1) * item.mineralExposure;
+    const materialCost = item.baseMaterialCost * inputIndex * item.matFactor;
+    const adjustedTime = item.baseTimeMinutes * eco.industryTimeMultiplier;
+    const liquidityFactor = clamp(item.demand * (0.78 + (1 - item.complexity) * 0.16), 0.45, 1.1);
+    const capitalFactor = clamp(state.wallet / Math.max(1, materialCost * 35), 0.35, 1.2);
+    const runsPerHour = (60 / adjustedTime) * eco.jobSlots * liquidityFactor * capitalFactor;
+
+    const netSale = referencePrice * (1 - eco.salesTax - eco.brokerFee);
+    const industryTax = referencePrice * (state.industryFee / 100);
+    const profitPerRun = netSale - materialCost - industryTax;
+    const marginPct = materialCost > 0 ? (profitPerRun / materialCost) * 100 : -999;
+    const profitHour = profitPerRun * runsPerHour;
+    const breakEvenRuns = profitPerRun > 0 ? Math.ceil(materialCost / profitPerRun) : Infinity;
+    const spreadPct =
+      patientPrice > 0 && instantPrice > 0 ? ((patientPrice - instantPrice) / patientPrice) * 100 : 0;
+    const confidence = market.source === "tycoon" ? 0.95 : 0.72;
+    const score = Math.max(0, profitHour) * (0.7 + item.demand * 0.3) * confidence;
+
+    return {
+      ...item,
+      marketPrice: referencePrice,
+      instantPrice,
+      patientPrice,
+      materialCost,
+      adjustedTime,
+      runsPerHour,
+      profitPerRun,
+      profitHour,
+      marginPct,
+      breakEvenRuns,
+      spreadPct,
+      source: market.source || "estimated",
+      score
     };
   }).sort((a, b) => b.score - a.score);
 }
@@ -1165,6 +1250,65 @@ function renderIndustry(industryResults) {
   )}/h, margem ${best.marginPct.toFixed(1)}%)`;
 }
 
+function classifyMarginDecision(row) {
+  if (row.marginPct >= 30 && row.profitHour >= 1500000) {
+    return { label: "Excelente", className: "decision-excellent" };
+  }
+  if (row.marginPct >= 15 && row.profitHour >= 500000) {
+    return { label: "Boa", className: "decision-good" };
+  }
+  return { label: "Aguardar", className: "decision-wait" };
+}
+
+function renderMarginHunter(rows) {
+  const minProfit = Math.max(0, parseNumber(document.getElementById("margin-min-profit")?.value, 120000));
+  const minMargin = Math.max(0, parseNumber(document.getElementById("margin-min-percent")?.value, 12));
+  const filtered = rows.filter((row) => row.profitPerRun >= minProfit && row.marginPct >= minMargin).slice(0, 40);
+
+  const tbody = document.getElementById("margin-body");
+  if (!filtered.length) {
+    tbody.innerHTML = `<tr><td colspan="8">Nenhuma oportunidade atende os filtros atuais.</td></tr>`;
+    document.getElementById("margin-best").textContent =
+      "Melhor oportunidade: ajusta os filtros para encontrar itens com mais margem.";
+    const tips = document.getElementById("margin-tips");
+    tips.innerHTML =
+      `<li class="alert warn">Baixa cobertura de oportunidades com os filtros atuais. Reduz lucro/margem mínima.</li>`;
+    return;
+  }
+
+  tbody.innerHTML = filtered
+    .map((row) => {
+      const decision = classifyMarginDecision(row);
+      const breakEvenText = Number.isFinite(row.breakEvenRuns) ? `${row.breakEvenRuns} runs` : "N/A";
+      return `<tr>
+        <td>${row.name}</td>
+        <td>${row.category}</td>
+        <td>${formatISKCompact(row.profitPerRun)}</td>
+        <td>${row.marginPct.toFixed(1)}%</td>
+        <td>${formatISKCompact(row.profitHour)}</td>
+        <td>${breakEvenText}</td>
+        <td>${row.source === "tycoon" ? "Tycoon" : row.source === "esi-fallback" ? "ESI" : "Estimado"}</td>
+        <td><span class="${decision.className}">${decision.label}</span></td>
+      </tr>`;
+    })
+    .join("");
+
+  const top = filtered[0];
+  document.getElementById("margin-best").textContent = `Melhor oportunidade: ${top.name} (${formatISK(
+    top.profitPerRun
+  )}/run, ${top.marginPct.toFixed(1)}% margem, ${formatISK(top.profitHour)}/h)`;
+
+  const tips = document.getElementById("margin-tips");
+  const alertRows = filtered.slice(0, 3);
+  tips.innerHTML = alertRows
+    .map((row) => {
+      return `<li class="alert ${
+        row.marginPct >= 25 ? "good" : "warn"
+      }">${row.name}: spread ${row.spreadPct.toFixed(1)}%, break-even ${Number.isFinite(row.breakEvenRuns) ? row.breakEvenRuns : "N/A"} runs.</li>`;
+    })
+    .join("");
+}
+
 function renderSkillROI(skillRows) {
   const tbody = document.getElementById("skills-roi-body");
   if (!skillRows.length) {
@@ -1393,6 +1537,7 @@ function renderDashboard() {
 
   const snapshot = computeSnapshot(state);
   const skillRoi = computeSkillROI(state, snapshot);
+  const marginRows = evaluateMarginOpportunities(state);
   const alerts = generateAlerts(snapshot, state, skillRoi);
 
   renderHero(snapshot);
@@ -1403,12 +1548,41 @@ function renderDashboard() {
   renderOreTable(snapshot.ores);
   renderSystems(snapshot.systems);
   renderIndustry(snapshot.industry);
+  renderMarginHunter(marginRows);
   renderSkillROI(skillRoi);
   renderPlan(snapshot, skillRoi, state);
   renderAlerts(alerts);
   ensureScenarioSkillOptions(state.skills);
 
   return { state, snapshot };
+}
+
+function setActiveView(view) {
+  const panels = Array.from(document.querySelectorAll("[data-view-panel]"));
+  const tabs = Array.from(document.querySelectorAll(".view-tab"));
+
+  panels.forEach((panel) => {
+    const isActive = panel.getAttribute("data-view-panel") === view;
+    panel.hidden = !isActive;
+  });
+
+  tabs.forEach((tab) => {
+    const active = tab.getAttribute("data-view") === view;
+    tab.classList.toggle("active", active);
+  });
+}
+
+function bindViewTabs() {
+  const tabs = Array.from(document.querySelectorAll(".view-tab"));
+  if (!tabs.length) {
+    return;
+  }
+  tabs.forEach((tab) => {
+    tab.addEventListener("click", () => {
+      const view = tab.getAttribute("data-view") || "overview";
+      setActiveView(view);
+    });
+  });
 }
 
 function bindEvents() {
@@ -1428,6 +1602,51 @@ function bindEvents() {
 
   document.getElementById("refresh-advice").addEventListener("click", () => {
     renderDashboard();
+  });
+
+  const marginNavLink = document.querySelector('a[href="#margin-hunter"]');
+  if (marginNavLink) {
+    marginNavLink.addEventListener("click", () => {
+      setActiveView("margin");
+    });
+  }
+
+  const overviewNavLinks = [
+    "#painel-hoje",
+    "#perfil",
+    "#mining",
+    "#industry",
+    "#simulador",
+    "#alertas"
+  ];
+  overviewNavLinks.forEach((href) => {
+    const link = document.querySelector(`a[href="${href}"]`);
+    if (!link) {
+      return;
+    }
+    link.addEventListener("click", () => {
+      setActiveView("overview");
+    });
+  });
+
+  const refreshMarginButton = document.getElementById("refresh-margin");
+  if (refreshMarginButton) {
+    refreshMarginButton.addEventListener("click", () => {
+      renderDashboard();
+    });
+  }
+
+  ["margin-min-profit", "margin-min-percent"].forEach((id) => {
+    const node = document.getElementById(id);
+    if (!node) {
+      return;
+    }
+    node.addEventListener("input", () => {
+      renderDashboard();
+    });
+    node.addEventListener("change", () => {
+      renderDashboard();
+    });
   });
 
   const refreshLiveButton = document.getElementById("refresh-live");
@@ -1467,7 +1686,9 @@ function init() {
   writeStateToInputs(savedState);
   updateSkillBadges(savedState.skills);
   ensureScenarioSkillOptions(savedState.skills);
+  bindViewTabs();
   bindEvents();
+  setActiveView("overview");
   renderDashboard();
   startLivePolling();
 }
