@@ -559,11 +559,15 @@ function economyFromState(state) {
 function getLiveMarketContext() {
   const market = liveCache.snapshot?.market || {};
   const products = market.products && typeof market.products === "object" ? market.products : {};
+  const oreCoverage = clamp(parseNumber(market.oreCoverage, 0), 0, 1);
+  const typeCoverage = clamp(parseNumber(market.typeCoverage, 0), 0, 1);
   return {
     mineralIndex: clamp(parseNumber(market.mineralIndex, 1), 0.65, 1.7),
     productIndex: clamp(parseNumber(market.productIndex, 1), 0.7, 1.8),
     productPrices: products,
-    oreCoverage: clamp(parseNumber(market.oreCoverage, 0), 0, 1)
+    oreCoverage,
+    typeCoverage,
+    confidence: oreCoverage * 0.7 + typeCoverage * 0.3
   };
 }
 
@@ -616,7 +620,7 @@ function evaluateOres(state, eco = economyFromState(state), marketCtx = getLiveM
     const bestOption = options[0];
     const iskHour = bestOption.net * effectiveThroughput * ore.harvestModifier;
     const riskPenalty = 1 - ore.risk * 0.14 * eco.fleetRiskMultiplier;
-    const confidenceFactor = 0.85 + marketCtx.oreCoverage * 0.15;
+    const confidenceFactor = 0.85 + marketCtx.confidence * 0.15;
     const score = iskHour * ore.liquidity * riskPenalty * confidenceFactor;
 
     return {
@@ -635,7 +639,11 @@ function evaluateOres(state, eco = economyFromState(state), marketCtx = getLiveM
 
 function evaluateIndustry(state, eco = economyFromState(state), marketCtx = getLiveMarketContext()) {
   return INDUSTRY_PRODUCTS.map((product) => {
-    const liveSell = Number(marketCtx.productPrices[product.name]?.sellPrice || 0);
+    const liveSell = Number(
+      marketCtx.productPrices[product.name]?.marketPrice ||
+        marketCtx.productPrices[product.name]?.sellPrice ||
+        0
+    );
     const sellPrice =
       liveSell > 0 ? liveSell : product.sellPrice * Math.min(Math.max(marketCtx.productIndex, 0.8), 1.5);
     const adjustedMaterials =
@@ -771,7 +779,7 @@ function computeSnapshot(state) {
     effectiveLogisticsCost: eco.effectiveLogisticsCost,
     burstLevel: eco.burstLevel,
     wealthTargets,
-    marketConfidence: marketCtx.oreCoverage
+    marketConfidence: marketCtx.confidence
   };
 }
 
@@ -824,11 +832,21 @@ function setLiveDotState(isOnline) {
 
 function renderLiveStatus(status, snapshot) {
   const mode = status?.mode || "offline";
+  const source = status?.snapshotSource || null;
   const connected = Boolean(status?.authConnected && snapshot);
   setLiveDotState(connected);
 
-  const statusText = connected ? "Live ESI conectado" : mode === "offline" ? "Offline" : "Modo local";
-  const updatedText = connected ? `Última sync: ${formatWhen(status?.lastUpdatedAt)}` : "Sem sincronização com ESI";
+  const statusText = connected
+    ? "Live ESI conectado"
+    : source === "market-only"
+      ? "Mercado live (sem SSO)"
+      : mode === "offline"
+        ? "Offline"
+        : "Modo local";
+  const updatedText =
+    connected || source === "market-only"
+      ? `Última sync: ${formatWhen(status?.lastUpdatedAt)}`
+      : "Sem sincronização com ESI";
 
   const headerStatus = document.getElementById("live-status");
   const headerUpdated = document.getElementById("live-updated");
@@ -851,6 +869,9 @@ function renderLiveStatus(status, snapshot) {
     } else if (!status?.envConfigured) {
       warningNode.textContent =
         "Falta configurar EVE_CLIENT_ID e EVE_CLIENT_SECRET para autenticar no EVE SSO.";
+    } else if (source === "market-only") {
+      warningNode.textContent =
+        "Mercado já está live. Conecta EVE SSO para destravar skills/wallet/jobs e precisão máxima.";
     } else if (!connected) {
       warningNode.textContent = "Conecta no EVE SSO para habilitar dados reais da tua conta.";
     } else {

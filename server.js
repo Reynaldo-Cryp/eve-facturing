@@ -15,9 +15,12 @@ const TOKEN_PATH = path.join(DATA_DIR, "eve-token.json");
 const USER_AGENT = "eve-wealth-os-live/1.0";
 
 const ESI_BASE = "https://esi.evetech.net/latest";
+const EVE_TYCOON_BASE = process.env.EVE_TYCOON_BASE || "https://evetycoon.com";
 const SSO_AUTH = "https://login.eveonline.com/v2/oauth/authorize";
 const SSO_TOKEN = "https://login.eveonline.com/v2/oauth/token";
 const REFRESH_INTERVAL_MS = 60_000;
+const MARKET_REFRESH_MS = 5 * 60 * 1000;
+const MARKET_REGION_ID = Number(process.env.EVE_MARKET_REGION_ID || 10000002);
 
 const CHARACTER_SKILL_MAP = {
   3380: "mining", // Mining
@@ -134,6 +137,7 @@ const AUTH_SCOPES = [
 ];
 
 const oauthStates = new Map();
+const marketStatsCache = new Map();
 const live = {
   startedAt: new Date().toISOString(),
   auth: {
@@ -432,7 +436,7 @@ function summarizeIndustry(jobsRows) {
   };
 }
 
-function extractMarketPrices(pricesRows) {
+function mapEsiFallbackPrices(pricesRows) {
   const byId = new Map();
   if (Array.isArray(pricesRows)) {
     for (const row of pricesRows) {
@@ -440,19 +444,131 @@ function extractMarketPrices(pricesRows) {
     }
   }
 
-  function unitPrice(typeId) {
-    const row = byId.get(Number(typeId));
-    if (!row) {
-      return 0;
-    }
+  const prices = new Map();
+  for (const [typeId, row] of byId.entries()) {
     const avg = Number(row.average_price || 0);
     const adj = Number(row.adjusted_price || 0);
-    return avg > 0 ? avg : adj;
+    const value = avg > 0 ? avg : adj;
+    if (value > 0) {
+      prices.set(typeId, value);
+    }
+  }
+  return prices;
+}
+
+function parseExpiresToMs(expiresHeader) {
+  if (!expiresHeader) {
+    return Date.now() + MARKET_REFRESH_MS;
+  }
+  const parsed = Date.parse(expiresHeader);
+  return Number.isFinite(parsed) ? parsed : Date.now() + MARKET_REFRESH_MS;
+}
+
+async function fetchTycoonStats(regionId, typeId) {
+  const cacheKey = `${regionId}:${typeId}`;
+  const cached = marketStatsCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.data;
+  }
+
+  const url = `${EVE_TYCOON_BASE}/api/v1/market/stats/${regionId}/${typeId}`;
+  try {
+    const response = await fetch(url, {
+      headers: {
+        Accept: "application/json",
+        "User-Agent": USER_AGENT
+      }
+    });
+    if (!response.ok) {
+      throw new Error(`Tycoon stats ${typeId} (${response.status})`);
+    }
+    const data = await response.json();
+    const expiresAt = parseExpiresToMs(response.headers.get("expires"));
+    marketStatsCache.set(cacheKey, { data, expiresAt });
+    return data;
+  } catch (error) {
+    if (cached?.data) {
+      return cached.data;
+    }
+    throw error;
+  }
+}
+
+function pickTycoonPrice(stats, mode = "balanced") {
+  const buy = Number(stats?.buyAvgFivePercent || 0);
+  const sell = Number(stats?.sellAvgFivePercent || 0);
+  if (buy <= 0 && sell <= 0) {
+    return 0;
+  }
+
+  if (mode === "instant") {
+    return buy > 0 ? buy : sell * 0.92;
+  }
+  if (mode === "patient") {
+    return sell > 0 ? sell : buy * 1.04;
+  }
+
+  if (buy > 0 && sell > 0) {
+    const spreadRatio = sell / Math.max(1, buy);
+    if (spreadRatio > 3.2) {
+      return sell * 0.74;
+    }
+    return buy * 0.62 + sell * 0.38;
+  }
+
+  return buy > 0 ? buy * 0.96 : sell * 0.9;
+}
+
+function safePrice(primary, fallback) {
+  const p = Number(primary || 0);
+  if (p > 0) {
+    return p;
+  }
+  const f = Number(fallback || 0);
+  return f > 0 ? f : 0;
+}
+
+async function extractMarketPrices(pricesRows, regionId = MARKET_REGION_ID) {
+  const esiFallback = mapEsiFallbackPrices(pricesRows);
+  const typeIds = new Set([PLEX_TYPE_ID]);
+  Object.values(MINERAL_TYPE_IDS).forEach((id) => typeIds.add(id));
+  Object.values(ORE_MARKET_META).forEach((meta) => {
+    typeIds.add(meta.rawTypeId);
+    typeIds.add(meta.compressedTypeId);
+  });
+  Object.values(INDUSTRY_PRODUCT_TYPE_IDS).forEach((id) => typeIds.add(id));
+
+  const tycoonStatsByType = new Map();
+  await Promise.all(
+    Array.from(typeIds).map(async (typeId) => {
+      try {
+        const stats = await fetchTycoonStats(regionId, typeId);
+        tycoonStatsByType.set(typeId, stats);
+      } catch (_error) {
+        // fallback to ESI later
+      }
+    })
+  );
+
+  function resolveUnitPrice(typeId, mode = "balanced") {
+    const stats = tycoonStatsByType.get(typeId);
+    const tycoonPrice = pickTycoonPrice(stats, mode);
+    const fallbackPrice = esiFallback.get(typeId) || 0;
+    if (tycoonPrice > 0) {
+      return { price: tycoonPrice, source: "tycoon" };
+    }
+    return {
+      price: fallbackPrice,
+      source: fallbackPrice > 0 ? "esi-fallback" : "missing"
+    };
   }
 
   const mineralPrices = {};
+  const mineralSources = {};
   for (const [name, typeId] of Object.entries(MINERAL_TYPE_IDS)) {
-    mineralPrices[name] = unitPrice(typeId);
+    const resolved = resolveUnitPrice(typeId, "balanced");
+    mineralPrices[name] = resolved.price;
+    mineralSources[name] = resolved.source;
   }
 
   let mineralWeighted = 0;
@@ -472,13 +588,15 @@ function extractMarketPrices(pricesRows) {
   const ores = {};
   let oreCoverageCount = 0;
   for (const [name, meta] of Object.entries(ORE_MARKET_META)) {
-    const rawUnitPrice = unitPrice(meta.rawTypeId);
+    const rawResolved = resolveUnitPrice(meta.rawTypeId, "balanced");
+    const compressedResolved = resolveUnitPrice(meta.compressedTypeId, "balanced");
+    const rawUnitPrice = rawResolved.price;
     if (rawUnitPrice <= 0 || meta.unitVolume <= 0) {
       continue;
     }
 
     oreCoverageCount += 1;
-    const compressedUnitPrice = unitPrice(meta.compressedTypeId);
+    const compressedUnitPrice = compressedResolved.price;
     const rawPricePerM3 = rawUnitPrice / meta.unitVolume;
     const compressedPricePerM3 =
       compressedUnitPrice > 0
@@ -492,16 +610,29 @@ function extractMarketPrices(pricesRows) {
       rawPricePerM3,
       compressedPricePerM3,
       refinedValuePerM3,
-      source: compressedUnitPrice > 0 ? "raw+compressed" : "raw+estimated-compressed"
+      source:
+        rawResolved.source === "tycoon" || compressedResolved.source === "tycoon"
+          ? "tycoon"
+          : compressedUnitPrice > 0
+            ? "esi-fallback"
+            : "estimated"
     };
   }
 
   const products = {};
   const productRatios = [];
   for (const [name, typeId] of Object.entries(INDUSTRY_PRODUCT_TYPE_IDS)) {
-    const sellPrice = unitPrice(typeId);
+    const sellResolved = resolveUnitPrice(typeId, "patient");
+    const instantResolved = resolveUnitPrice(typeId, "instant");
+    const marketResolved = resolveUnitPrice(typeId, "balanced");
+    const sellPrice = sellResolved.price;
     if (sellPrice > 0) {
-      products[name] = { sellPrice };
+      products[name] = {
+        sellPrice,
+        instantSellPrice: instantResolved.price,
+        marketPrice: marketResolved.price,
+        source: sellResolved.source
+      };
       const baseline = Number(INDUSTRY_PRODUCT_BASELINES[name] || 0);
       if (baseline > 0) {
         productRatios.push(sellPrice / baseline);
@@ -513,18 +644,29 @@ function extractMarketPrices(pricesRows) {
     ? Math.min(Math.max(productRatios.reduce((acc, value) => acc + value, 0) / productRatios.length, 0.7), 1.8)
     : 1;
 
-  const plexPrice = unitPrice(PLEX_TYPE_ID);
+  const plexResolved = resolveUnitPrice(PLEX_TYPE_ID, "patient");
+  const plexPrice = safePrice(plexResolved.price, esiFallback.get(PLEX_TYPE_ID));
+  const tycoonTypeCoverage = typeIds.size ? tycoonStatsByType.size / typeIds.size : 0;
+
   return {
     ores,
     minerals: mineralPrices,
+    mineralSources,
     mineralIndex,
     products,
     productIndex,
     oreCoverage: Object.keys(ORE_MARKET_META).length
       ? oreCoverageCount / Object.keys(ORE_MARKET_META).length
       : 0,
+    typeCoverage: tycoonTypeCoverage,
+    regionId,
     plexPrice: plexPrice > 0 ? plexPrice : null
   };
+}
+
+async function fetchPublicMarketSummary() {
+  const prices = await esiRequest(`/markets/prices/`, { auth: false });
+  return extractMarketPrices(prices, MARKET_REGION_ID);
 }
 
 async function pullLiveSnapshot() {
@@ -533,6 +675,14 @@ async function pullLiveSnapshot() {
       connected: false,
       characterId: null
     };
+    const marketSummary = await fetchPublicMarketSummary();
+    live.snapshot = {
+      source: "market-only",
+      updatedAt: new Date().toISOString(),
+      market: marketSummary
+    };
+    live.lastUpdatedAt = live.snapshot.updatedAt;
+    live.lastError = null;
     return;
   }
 
@@ -542,7 +692,7 @@ async function pullLiveSnapshot() {
     characterId
   };
 
-  const [charInfo, skills, skillQueue, wallet, orders, jobs, mining, assets, prices] = await Promise.all([
+  const [charInfo, skills, skillQueue, wallet, orders, jobs, mining, assets, marketSummary] = await Promise.all([
     esiRequest(`/characters/${characterId}/`, { auth: true }),
     esiRequest(`/characters/${characterId}/skills/`, { auth: true }),
     esiRequest(`/characters/${characterId}/skillqueue/`, { auth: true }),
@@ -551,14 +701,13 @@ async function pullLiveSnapshot() {
     esiRequest(`/characters/${characterId}/industry/jobs/`, { auth: true, query: { include_completed: true } }),
     esiRequest(`/characters/${characterId}/mining/`, { auth: true }),
     esiRequest(`/characters/${characterId}/assets/`, { auth: true }),
-    esiRequest(`/markets/prices/`, { auth: false })
+    fetchPublicMarketSummary()
   ]);
 
   const skillLevels = mapCoreSkills(skills);
   const miningSummary = summarizeMining(mining);
   const ordersSummary = summarizeOrders(orders);
   const industrySummary = summarizeIndustry(jobs);
-  const marketSummary = extractMarketPrices(prices);
 
   live.snapshot = {
     source: "esi-live",
@@ -722,6 +871,7 @@ function statusPayload() {
   const env = getEnv();
   return {
     mode: live.snapshot?.source ? "live" : "offline",
+    snapshotSource: live.snapshot?.source || null,
     envConfigured: env.configured,
     authConnected: live.auth.connected,
     characterId: live.auth.characterId,

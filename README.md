@@ -11,6 +11,7 @@ Painel de mineração + fabricação + PLEX com modo **real-time** usando EVE SS
 - Industry jobs
 - Mining ledger (quantidade/entradas)
 - Mercado público (inclui PLEX e ores usados no painel)
+- Mercado via EVE Tycoon stats (com cache pelo header `Expires`) + fallback ESI
 
 ## Requisitos
 
@@ -22,6 +23,8 @@ Painel de mineração + fabricação + PLEX com modo **real-time** usando EVE SS
 1. Copia `.env.example` para `.env` e preenche `EVE_CLIENT_ID` e `EVE_CLIENT_SECRET`.
 2. Na app do EVE, define callback URL para:
    - `http://127.0.0.1:3000/auth/eve/callback`
+3. (Opcional) Define região de mercado:
+   - `EVE_MARKET_REGION_ID=10000002` (The Forge, padrão)
 
 ## Rodar
 
@@ -41,6 +44,8 @@ Abre no browser:
 2. Autoriza os scopes.
 3. O servidor passa a atualizar dados automaticamente a cada ~60s.
 4. O frontend consulta snapshot a cada ~15s.
+
+Sem SSO, o painel ainda carrega mercado público (Tycoon + ESI fallback), mas sem dados privados da personagem.
 
 ## Rodar 24h
 
